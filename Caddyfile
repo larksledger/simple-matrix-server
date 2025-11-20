@@ -1,0 +1,13 @@
+# 1. The Matrix Subdomain
+# This handles the actual traffic and federation
+matrix.your-domain.com, matrix.your-domain.com:8448 {
+    reverse_proxy conduit:6167
+    encode zstd gzip
+}
+
+# 2. The Root Domain (Opional)
+your-domain.com {
+
+    # OPTIONAL: Put a "Coming Soon" page here for your future website
+    respond "This is my extensible home server! Matrix is running on the subdomain."
+}
