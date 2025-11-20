@@ -189,3 +189,6 @@ You can now use any Matrix client. We will use Element.
 ### ⚠️ Important Security Note
 
 Once you have created your account, go back to `docker-compose.yml` and change: `CONDUIT_ALLOW_REGISTRATION: "false"`. Then run `docker compose up -d` again. This prevents strangers from creating accounts on your private server.
+
+## Miscellaneous
+- On openSuse, I had problems with docker and firewalld, and also with SELinux. My solution was to disable firewalld and temporarily `sudo setenforce 0`, so that docker can create the needed directories for the containers. 
