@@ -1,0 +1,58 @@
+services:
+  # 1. The Matrix Server (Conduit)
+  conduit:
+    image: matrixconduit/matrix-conduit:latest
+    container_name: conduit
+    restart: unless-stopped
+    environment:
+      # Replace with your actual domain
+      CONDUIT_SERVER_NAME: "your-domain.com" # <--- EDIT THIS
+      # Allow new users to register? (true/false)
+      CONDUIT_ALLOW_REGISTRATION: "true"
+      CONDUIT_ALLOW_FEDERATION: "false"
+      CONDUIT_ALLOW_CHECK_FOR_UPDATES: "true"
+      CONDUIT_TRUSTED_SERVERS: "[]"
+      CONDUIT_ADDRESS: "0.0.0.0"
+      CONDUIT_DATABASE_PATH: /var/lib/matrix-conduit/
+      CONDUIT_PORT: 6167
+      CONDUIT_MAX_REQUEST_SIZE: 20000000 # ~20MB file upload limit
+      CONDUIT_CONFIG: ""
+      CONDUIT_DATABASE_BACKEND: "rocksdb"
+    ports:
+      - "6167:6167"
+    volumes:
+      - ./conduit_db:/var/lib/matrix-conduit/
+    networks:
+      - matrix_net
+
+  # 2. The Reverse Proxy (Caddy)
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8448:8448" # Required for Matrix Federation
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy_data:/data
+      - ./caddy_config:/config
+    networks:
+      - matrix_net
+
+  # 3. Dynamic DNS Updater
+  # A beginner-friendly container with a Web UI to manage your IP updates
+  ddns-updater:
+    image: qmcgaw/ddns-updater
+    container_name: ddns-updater
+    restart: unless-stopped
+    ports:
+      - "8000:8000" # Web UI accessible at http://localhost:8000
+    volumes:
+      - ./ddns_data:/updater/data
+    networks:
+      - matrix_net
+
+networks:
+  matrix_net:
