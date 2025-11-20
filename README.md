@@ -59,24 +59,33 @@ Create a file named `docker-compose.yml` and paste this code.
 
 ```yaml
 services:
-  # The Matrix Server
+  # 1. The Matrix Server (Conduit)
   conduit:
     image: matrixconduit/matrix-conduit:latest
     container_name: conduit
     restart: unless-stopped
     environment:
-      CONDUIT_SERVER_NAME: "your-domain.com" # <--- CHANGE THIS
+      # Replace with your actual domain
+      CONDUIT_SERVER_NAME: "your-domain.com" # <--- EDIT THIS
+      # Allow new users to register? (true/false)
       CONDUIT_ALLOW_REGISTRATION: "true"
+      CONDUIT_ALLOW_FEDERATION: "false"
+      CONDUIT_ALLOW_CHECK_FOR_UPDATES: "true"
+      CONDUIT_TRUSTED_SERVERS: "[]"
+      CONDUIT_ADDRESS: "0.0.0.0"
       CONDUIT_DATABASE_PATH: /var/lib/matrix-conduit/
       CONDUIT_PORT: 6167
-      CONDUIT_MAX_REQUEST_SIZE: 20000000
-      CONDUIT_TRUSTED_SERVERS: '["matrix.org"]'
+      CONDUIT_MAX_REQUEST_SIZE: 20000000 # ~20MB file upload limit
+      CONDUIT_CONFIG: ""
+      CONDUIT_DATABASE_BACKEND: "rocksdb"
+    ports:
+      - "6167:6167"
     volumes:
       - ./conduit_db:/var/lib/matrix-conduit/
     networks:
       - matrix_net
 
-  # The Web Server & SSL Manager
+  # 2. The Reverse Proxy (Caddy)
   caddy:
     image: caddy:latest
     container_name: caddy
@@ -84,7 +93,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8448:8448"
+      - "8448:8448" # Required for Matrix Federation
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy_data:/data
@@ -92,13 +101,14 @@ services:
     networks:
       - matrix_net
 
-  # Dynamic DNS Updater (Keeps your domain pointed to your home IP)
+  # 3. Dynamic DNS Updater
+  # A beginner-friendly container with a Web UI to manage your IP updates
   ddns-updater:
     image: qmcgaw/ddns-updater
     container_name: ddns-updater
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8000:8000" # Web UI accessible at http://localhost:8000
     volumes:
       - ./ddns_data:/updater/data
     networks:
@@ -114,29 +124,19 @@ Create a file named `Caddyfile` (no `.txt` extension!) and paste this code.
 **Change**: Replace **ALL 4** instances of `your-domain.com` with your actual domain name.
 
 ```
-your-domain.com, your-domain.com:8448 {
-    # 1. Handle Federation (.well-known delegation)
-    # This tells other servers "I am here!"
-    handle_path /.well-known/matrix/server {
-        header Content-Type application/json
-        header Access-Control-Allow-Origin *
-        respond `{"m.server": "your-domain.com:443"}`
-    }
-
-    # 2. Handle Client Discovery
-    # This tells your phone "The server is at this URL"
-    handle_path /.well-known/matrix/client {
-        header Content-Type application/json
-        header Access-Control-Allow-Origin *
-        respond `{"m.homeserver": {"base_url": "https://your-domain.com"}}`
-    }
-
-    # 3. Proxy traffic to Conduit
-    reverse_proxy /_matrix/* conduit:6167
-    reverse_proxy /_synapse/* conduit:6167
-
-    # Enable compression for speed
+# 1. The Matrix Subdomain
+# This handles the actual traffic and federation
+matrix.your-domain.com, matrix.your-domain.com:8448 {
+    reverse_proxy conduit:6167
     encode zstd gzip
+}
+
+# 2. The Root Domain (Opional)
+your-domain.com {
+
+    # OPTIONAL: Put a "Coming Soon" page here for your future website
+    respond "This is my extensible home server! Matrix is running on the subdomain."
+}
 }
 ```
 
