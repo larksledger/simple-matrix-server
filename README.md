@@ -1,5 +1,13 @@
 # My Matrix Homeserver
 
+This repo is designed to hopefully be an accessible resource on how you could host your own [Matrix](https://matrix.org/) server, so that you can have private, end-to-end encrypted chats with your friends and families and don't need to trust companies to not infringe on your privacy.
+
+If you follow this guide, by the end you will have a
+
+- Matrix server, [Conduit](https://docs.conduit.rs/) to be exact
+- Your own, free domain, which will always point to your network, even if your ISP-assigned IP changes regularly
+- As a reverse proxy, [Caddy](https://caddyserver.com/), which automatically cares about https certificates, redirects `matrix.yourdomain.org` to your matrix server and is a solid piece of infrastructure if you ever want to host more self-hosted services
+
 ## Prerequisites
 
 - **A Computer/Server**: This can be a Raspberry Pi, an old laptop running Linux, or your main Windows PC (running 24/7).
