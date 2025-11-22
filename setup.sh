@@ -142,7 +142,7 @@ global:
   # sections. For monolith deployments using SQLite databases,
   # you must configure the "database" block for each component instead.
   database:
-    connection_string: postgresql://dendrite:$DBPASS@matrix-postgres-1/dendrite?sslmode=disable
+    connection_string: postgresql://dendrite:$DBPASS@postgres/dendrite?sslmode=disable
     max_open_conns: 90
     max_idle_conns: 5
     conn_max_lifetime: -1
