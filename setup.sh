@@ -501,7 +501,7 @@ services:
       - ./dendrite_media:/var/dendrite/media
       - ./dendrite_jetstream:/var/dendrite/jetstream
       - ./dendrite_search_index:/var/dendrite/searchindex
-	  - ./keys:/mnt
+      - ./keys:/mnt
     depends_on:
       postgres:
         condition: service_healthy
