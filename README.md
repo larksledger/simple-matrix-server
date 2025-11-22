@@ -4,7 +4,7 @@ This repo is designed to hopefully be an accessible resource on how you could ho
 
 If you follow this guide, by the end you will have a
 
-- Matrix server, [Conduit](https://docs.conduit.rs/) to be exact
+- Matrix server, [Dendrite](https://github.com/element-hq/dendrite) to be exact
 - Your own, free domain, which will always point to your network, even if your ISP-assigned IP changes regularly
 - As a reverse proxy, [Caddy](https://caddyserver.com/), which automatically cares about https certificates, redirects `matrix.yourdomain.org` to your matrix server and is a solid piece of infrastructure if you ever want to host more self-hosted services
 
@@ -56,147 +56,31 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 ### 🐧 For Linux Users (other)
 You probably already know how to install Docker in your Distro.
 
-## 2. Create your Server Folder
-1. Create a new folder on your computer named `matrix-server`
-2. Inside this folder, you will create **two files** eith the exact names and contents below (alternatively you can `git clone` this repository, if you know what that means)
-
-### File 1: `docker-compose.yml`
-Create a file named `docker-compose.yml` and paste this code. 
-
-**Change**: Replace `your-domain.com` in the `CONDUIT_SERVER_NAME` line with your actual domain.
-
-```yaml
-services:
-  # 1. The Matrix Server (Conduit)
-  conduit:
-    image: matrixconduit/matrix-conduit:latest
-    container_name: conduit
-    restart: unless-stopped
-    environment:
-      # Replace with your actual domain
-      CONDUIT_SERVER_NAME: "your-domain.com" # <--- EDIT THIS
-      # Allow new users to register? (true/false)
-      CONDUIT_ALLOW_REGISTRATION: "true"
-      CONDUIT_ALLOW_FEDERATION: "false"
-      CONDUIT_ALLOW_CHECK_FOR_UPDATES: "true"
-      CONDUIT_TRUSTED_SERVERS: "[]"
-      CONDUIT_ADDRESS: "0.0.0.0"
-      CONDUIT_DATABASE_PATH: /var/lib/matrix-conduit/
-      CONDUIT_PORT: 6167
-      CONDUIT_MAX_REQUEST_SIZE: 20000000 # ~20MB file upload limit
-      CONDUIT_CONFIG: ""
-      CONDUIT_DATABASE_BACKEND: "rocksdb"
-    ports:
-      - "6167:6167"
-    volumes:
-      - ./conduit_db:/var/lib/matrix-conduit/
-    networks:
-      - matrix_net
-
-  # 2. The Reverse Proxy (Caddy)
-  caddy:
-    image: caddy:latest
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8448:8448" # Required for Matrix Federation
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./caddy_data:/data
-      - ./caddy_config:/config
-    networks:
-      - matrix_net
-
-  # 3. Dynamic DNS Updater
-  # A beginner-friendly container with a Web UI to manage your IP updates
-  ddns-updater:
-    image: qmcgaw/ddns-updater
-    container_name: ddns-updater
-    restart: unless-stopped
-    ports:
-      - "8000:8000" # Web UI accessible at http://localhost:8000
-    volumes:
-      - ./ddns_data:/updater/data
-    networks:
-      - matrix_net
-
-networks:
-  matrix_net:
-```
-
-### File 2: `Caddyfile`
-Create a file named `Caddyfile` (no `.txt` extension!) and paste this code. 
-
-**Change**: Replace **ALL 4** instances of `your-domain.com` with your actual domain name.
-
-```
-# 1. The Matrix Subdomain
-# This handles the actual traffic and federation
-matrix.your-domain.com, matrix.your-domain.com:8448 {
-    reverse_proxy conduit:6167
-    encode zstd gzip
-}
-
-# 2. The Root Domain (Opional)
-your-domain.com {
-
-    # OPTIONAL: Put a "Coming Soon" page here for your future website
-    respond "This is my extensible home server! Matrix is running on the subdomain."
-}
-}
-```
-
-## 3. Configure your Router (Port Forwarding)
-
-For the outside world to see your server, you must open "doors" in your router.
-
-1.Log in to your router (usually `192.168.1.1` or `192.168.0.1`).
-
-2. Find **Port Forwarding** settings.
-
-3. Forward the following ports to your computer's local IP address (e.g., `192.168.1.50`):
-
-    - **Port 80** (TCP) -> Port 80
-
-    - **Port 443** (TCP) -> Port 443
-
-    - **Port 8448** (TCP) -> Port 8448
-
-## 4. Start the Server
-1. Open your terminal/PowerShell inside your `matrix-server` folder.
-2. Run the start command:
+## 2. Setup
+### Automatic Setup
+The most convenient way of setting the server up is cloning this repository, changing into `simple-matrix-server` and executing the included setup script:
 ```bash
-docker compose up -d
+git clone https://github.com/larksledger/simple-matrix-server
+cd simple-matrix-server
+bash setup.sh
 ```
 
-## 5. Set up Dynamic DNS
-1. Opem your web browser and go to `http://localhost:8000`
-2. You will see the **DDNS Updater** interface.
-3. Enter your domain provider's credentials (e.g. Namecheap, DuckDNS token).
-4. This ensures that if your home internet IP changes, your domain will automatically find your new IP.
+This will setup the server with some opinionated defaults, which you may disagree with.
+The setup will ask you for your preferred subdomain for the matrix server and your domain name. For examplem, if you registered `yourdomain.duckdns.org` with duckdns, you would answer the script something like this:
 
-## 6. Connect Your Client
-You can now use any Matrix client. We will use Element.
+```bash
+Enter the subdomain prefix (e.g., chat, matrix): matrix
+Enter your domain name (e.g., mydomain.net): yourdomain.duckdns.org
+```
 
-1. Download Element for your phone or computer.
+This configures the server such that matrix clients would need to connect to `matrix.yourdomain.duckdns.org`.
 
-2. Click Create Account.
+#### Manual post-setup
+The setup sript cannot perform everything for you. The configuration for the dynamical DNS will still be missing, as it varies with each DynDNS provider and there are many of these providers. The configuration is in `ddns_data/config.json`. You can refer to the [documentation](https://github.com/qdm12/ddns-updater/tree/master/docs) for your provider to fill in the blanks. 
 
-3. Crucial Step: Look for "Edit", "Change", or "Custom Server".
+### Manual setup
+TODO
 
-    - By default, it selects `matrix.org`. You must change this!
-
-    - Enter your domain: `https://your-domain.com`
-
-4. Enter a username and password.
-
-5. Click Register. You are now chatting on your own private server!
-
-### ⚠️ Important Security Note
-
-Once you have created your account, go back to `docker-compose.yml` and change: `CONDUIT_ALLOW_REGISTRATION: "false"`. Then run `docker compose up -d` again. This prevents strangers from creating accounts on your private server.
-
-## Miscellaneous
-- On openSuse, I had problems with docker and firewalld, and also with SELinux. My solution was to disable firewalld and temporarily `sudo setenforce 0`, so that docker can create the needed directories for the containers. 
+## 3. Post Setup
+### Adding users
+By default, registration of new users is disabled. If you want to add users, you have to add them with the `create-account` utility in the dendrite container. For your convenience, there is the `add_user.sh` script that makes this interaction a little faster.
