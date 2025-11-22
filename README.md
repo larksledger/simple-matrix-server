@@ -85,3 +85,7 @@ TODO
 ## 3. Post Setup
 ### Adding users
 By default, registration of new users is disabled. If you want to add users, you have to add them with the `create-account` utility in the dendrite container. For your convenience, there is the `add_user.sh` script that makes this interaction a little faster.
+
+## TODOs
+- Federation
+- TURN server
