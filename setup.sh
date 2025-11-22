@@ -495,7 +495,7 @@ services:
     image: ghcr.io/element-hq/dendrite-monolith:latest
     ports:
       - 8008:8008
-      - 8448:8448
+      - 8449:8448
     volumes:
       - ./config:/etc/dendrite
       - ./dendrite_media:/var/dendrite/media
