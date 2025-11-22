@@ -16,6 +16,7 @@ If you follow this guide, by the end you will have a
 
 - **Access to your Router**: You will need to change settings on your Wi-Fi router.
   - Namely, you need to forward ports **80** and **443** to ports **80** and **443** on your server.
+  - For Federation, you'll also want to forwward port **8448** to port **8448** on the server.
 
 ---
 
