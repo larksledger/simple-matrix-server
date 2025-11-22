@@ -15,6 +15,7 @@ If you follow this guide, by the end you will have a
 - **A Domain Name**: You need a domain (like my-chat-server.com). You can get one for cheap from Namecheap, Porkbun, or use a free one like DuckDNS.
 
 - **Access to your Router**: You will need to change settings on your Wi-Fi router.
+  - Namely, you need to forward ports **80** and **443** to ports **80** and **443** on your server.
 
 ---
 
