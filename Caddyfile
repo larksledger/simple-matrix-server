@@ -1,12 +1,13 @@
 # 1. The Matrix Subdomain
 # This handles the actual traffic and federation
-matrix.your-domain.com, matrix.your-domain.com:8448 {
-    reverse_proxy monolith:8008
-    encode zstd gzip
+matrix.your-domain.com {
+    reverse_proxy /_matrix/* monolith:8008
 }
 
-# 2. The Root Domain (Opional)
+# 2. The Root Domain
 your-domain.com {
-    # OPTIONAL: Put a "Coming Soon" page here for your future website
-    respond "This is my extensible home server! Matrix is running on the subdomain."
+	header /.well-known/matrix/* Content-Type application/json
+	header /.well-known/matrix/* Access-Control-Allow-Origin *
+	respond /.well-known/matrix/server `{"m.server": "matrix.your-domain.com:443"}`
+	respond /.well-known/matrix/client `{"m.homeserver": {"base_url": "https://matrix.your-domain.com"}}`
 }
