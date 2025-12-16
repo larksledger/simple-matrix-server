@@ -31,8 +31,15 @@ if [[ ! -f "$CADDYFILE" ]]; then
 # 1. The Matrix Subdomain
 # This handles the actual traffic and federation
 $NEW_CONFIG_STRING {
-    reverse_proxy monolith:8008
-    encode zstd gzip
+    header /.well-known/matrix/* {
+        Access-Control-Allow-Origin *
+        Content-Type application/json
+        Cache-Control public,max-age=806400
+    }
+    file_server /.well-known/matrix/* {
+        root /var/www/
+    }
+    reverse_proxy /_matrix/* continuwuity:6167
 }
 
 # 2. The Root Domain (Opional)
