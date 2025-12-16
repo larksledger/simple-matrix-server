@@ -102,374 +102,787 @@ echo "Done"
 
 echo "Generating dendrite config"
 mkdir -p "config"
-DENDRITEFILE="config/dendrite.yaml"
-if [[ ! -f "$DENDRITEFILE" ]]; then
-        echo "Warning: Dendrite config not found. Generating"
-        cat << EOF > "$DENDRITEFILE"
-# This is the Dendrite configuration file.
+CONDUWUITFILE="config.toml"
+if [[ ! -f "$CONDUWUITFILE" ]]; then
+        echo "Warning: Conduwuit config not found. Generating"
+        cat << EOF > "$CONDUWUITFILE"
+# =============================================================================
+#  This is the official example config for conduwuit.
+#  If you use it for your server, you will need to adjust it to your own needs.
+#  At the very least, change the server_name field!
 #
-# The configuration is split up into sections - each Dendrite component has a
-# configuration section, in addition to the "global" section which applies to
-# all components.
+#  This documentation can also be found at https://conduwuit.puppyirl.gay/configuration.html
+# =============================================================================
 
-# The version of the configuration file.
-version: 2
+[global]
 
-# Global Matrix configuration. This configuration applies to all components.
-global:
-  # The domain name of this homeserver.
-  server_name: $NEW_CONFIG_STRING
+# The server_name is the pretty name of this server. It is used as a suffix for user
+# and room ids. Examples: matrix.org, conduit.rs
 
-  # The path to the signing private key file, used to sign requests and events.
-  # Note that this is NOT the same private key as used for TLS! To generate a
-  # signing key, use "./bin/generate-keys --private-key matrix_key.pem".
-  private_key: /mnt/matrix_key.pem
+# The Conduit server needs all /_matrix/ requests to be reachable at
+# https://your.server.name/ on port 443 (client-server) and 8448 (federation).
 
-  # The paths and expiry timestamps (as a UNIX timestamp in millisecond precision)
-  # to old signing keys that were formerly in use on this domain name. These
-  # keys will not be used for federation request or event signing, but will be
-  # provided to any other homeserver that asks when trying to verify old events.
-  old_private_keys:
-  #  If the old private key file is available:
-  #  - private_key: old_matrix_key.pem
-  #    expired_at: 1601024554498
-  #  If only the public key (in base64 format) and key ID are known:
-  #  - public_key: mn59Kxfdq9VziYHSBzI7+EDPDcBS2Xl7jeUdiiQcOnM=
-  #    key_id: ed25519:mykeyid
-  #    expired_at: 1601024554498
+# If that's not possible for you, you can create /.well-known files to redirect
+# requests (delegation). See
+# https://spec.matrix.org/latest/client-server-api/#getwell-knownmatrixclient
+# and
+# https://spec.matrix.org/v1.9/server-server-api/#getwell-knownmatrixserver
+# for more information
 
-  # How long a remote server can cache our server signing key before requesting it
-  # again. Increasing this number will reduce the number of requests made by other
-  # servers for our key but increases the period that a compromised key will be
-  # considered valid by other homeservers.
-  key_validity_period: 168h0m0s
+# YOU NEED TO EDIT THIS
+server_name = "$DOMAIN"
 
-  # Global database connection pool, for PostgreSQL monolith deployments only. If
-  # this section is populated then you can omit the "database" blocks in all other
-  # sections. For monolith deployments using SQLite databases,
-  # you must configure the "database" block for each component instead.
-  database:
-    connection_string: postgresql://dendrite:$DBPASS@postgres/dendrite?sslmode=disable
-    max_open_conns: 90
-    max_idle_conns: 5
-    conn_max_lifetime: -1
+# Servers listed here will be used to gather public keys of other servers (notary trusted key servers).
+#
+# The default behaviour for conduwuit is to attempt to query trusted key servers before querying the individual servers.
+# This is done for performance reasons, but if you would like to query individual servers before the notary servers
+# configured below, set to
+#
+# (Currently, conduwuit doesn't support batched key requests, so this list should only contain Synapse servers)
+# Defaults to `matrix.org`
+trusted_servers = ["matrix.org"]
 
-  # Configuration for in-memory caches. Caches can often improve performance by
-  # keeping frequently accessed items (like events, identifiers etc.) in memory
-  # rather than having to read them from the database.
-  cache:
-    # The estimated maximum size for the global cache in bytes, or in terabytes,
-    # gigabytes, megabytes or kilobytes when the appropriate 'tb', 'gb', 'mb' or
-    # 'kb' suffix is specified. Note that this is not a hard limit, nor is it a
-    # memory limit for the entire process. A cache that is too small may ultimately
-    # provide little or no benefit.
-    max_size_estimated: 1gb
+# Sentry.io crash/panic reporting, performance monitoring/metrics, etc. This is NOT enabled by default.
+# conduwuit's default Sentry reporting endpoint is o4506996327251968.ingest.us.sentry.io
+#
+# Defaults to *false*
+#sentry = false
 
-    # The maximum amount of time that a cache entry can live for in memory before
-    # it will be evicted and/or refreshed from the database. Lower values result in
-    # easier admission of new cache entries but may also increase database load in
-    # comparison to higher values, so adjust conservatively. Higher values may make
-    # it harder for new items to make it into the cache, e.g. if new rooms suddenly
-    # become popular.
-    max_age: 1h
+# Sentry reporting URL if a custom one is desired
+#
+# Defaults to conduwuit's default Sentry endpoint: "https://fe2eb4536aa04949e28eff3128d64757@o4506996327251968.ingest.us.sentry.io/4506996334657536"
+#sentry_endpoint = ""
 
-  # The server name to delegate server-server communications to, with optional port
-  # e.g. localhost:443
-  well_known_server_name: "$NEW_CONFIG_STRING:443" # <--- CHANGE THIS
+# Report your Conduwuit server_name in Sentry.io crash reports and metrics
+#
+# Defaults to false
+#sentry_send_server_name = false
 
-  # The base URL to delegate client-server communications to e.g. https://localhost
-  well_known_client_name: "https://$NEW_CONFIG_STRING" # <--- CHANGE THIS
-
-  # The server name to delegate sliding sync communications to, with optional port.
-  # Requires well_known_client_name to also be configured.
-  well_known_sliding_sync_proxy: ""
-
-  # Lists of domains that the server will trust as identity servers to verify third
-  # party identifiers such as phone numbers and email addresses.
-  trusted_third_party_id_servers:
-    - matrix.org
-    - vector.im
-
-  # Disables federation. Dendrite will not be able to communicate with other servers
-  # in the Matrix federation and the federation API will not be exposed.
-  disable_federation: false
-
-  # Configures the handling of presence events. Inbound controls whether we receive
-  # presence events from other servers, outbound controls whether we send presence
-  # events for our local users to other servers.
-  presence:
-    enable_inbound: false
-    enable_outbound: false
-
-  # Configures phone-home statistics reporting. These statistics contain the server
-  # name, number of active users and some information on your deployment config.
-  # We use this information to understand how Dendrite is being used in the wild.
-  report_stats:
-    enabled: false
-    endpoint: https://panopticon.matrix.org/push
-
-  # Server notices allows server admins to send messages to all users on the server.
-  server_notices:
-    enabled: false
-    # The local part, display name and avatar URL (as a mxc:// URL) for the user that
-    # will send the server notices. These are visible to all users on the deployment.
-    local_part: "_server"
-    display_name: "Server Alerts"
-    avatar_url: ""
-    # The room name to be used when sending server notices. This room name will
-    # appear in user clients.
-    room_name: "Server Alerts"
-
-  # Configuration for NATS JetStream
-  jetstream:
-    # A list of NATS Server addresses to connect to. If none are specified, an
-    # internal NATS server will be started automatically when running Dendrite in
-    # monolith mode.
-    addresses:
-    # - localhost:4222
-
-    # Disable the validation of TLS certificates of NATS. This is
-    # not recommended in production since it may allow NATS traffic
-    # to be sent to an insecure endpoint.
-    disable_tls_validation: false
-
-    # Persistent directory to store JetStream streams in. This directory should be
-    # preserved across Dendrite restarts.
-    storage_path: ./
-
-    # The prefix to use for stream names for this homeserver - really only useful
-    # if you are running more than one Dendrite server on the same NATS deployment.
-    topic_prefix: Dendrite
-
-  # Configuration for Prometheus metric collection.
-  metrics:
-    enabled: false
-    basic_auth:
-      username: metrics
-      password: metrics
-
-  # Optional DNS cache. The DNS cache may reduce the load on DNS servers if there
-  # is no local caching resolver available for use.
-  dns_cache:
-    enabled: false
-    cache_size: 256
-    cache_lifetime: "5m" # 5 minutes; https://pkg.go.dev/time@master#ParseDuration
-
-# Configuration for the Appservice API.
-app_service_api:
-  # Disable the validation of TLS certificates of appservices. This is
-  # not recommended in production since it may allow appservice traffic
-  # to be sent to an insecure endpoint.
-  disable_tls_validation: false
-
-  # Send the access_token query parameter with appservice requests in addition
-  # to the Authorization header. This can cause hs_tokens to be saved to logs,
-  # so it should not be enabled unless absolutely necessary.
-  legacy_auth: false
-  # Use the legacy unprefixed paths for appservice requests.
-  legacy_paths: false
-
-  # Appservice configuration files to load into this homeserver.
-  config_files:
-  #  - /path/to/appservice_registration.yaml
-
-# Configuration for the Client API.
-client_api:
-  # Prevents new users from being able to register on this homeserver, except when
-  # using the registration shared secret below.
-  registration_disabled: true
-
-  # Prevents new guest accounts from being created. Guest registration is also
-  # disabled implicitly by setting 'registration_disabled' above.
-  guests_disabled: true
-
-  # If set, allows registration by anyone who knows the shared secret, regardless
-  # of whether registration is otherwise disabled.
-  registration_shared_secret: "changeme" # <--- CHANGE THIS
-
-  # Whether to require reCAPTCHA for registration. If you have enabled registration
-  # then this is HIGHLY RECOMMENDED to reduce the risk of your homeserver being used
-  # for coordinated spam attacks.
-  enable_registration_captcha: false
-
-  # Settings for ReCAPTCHA.
-  recaptcha_public_key: ""
-  recaptcha_private_key: ""
-  recaptcha_bypass_secret: ""
-  
-  # To use hcaptcha.com instead of ReCAPTCHA, set the following parameters, otherwise just keep them empty.
-  # recaptcha_siteverify_api: "https://hcaptcha.com/siteverify"
-  # recaptcha_api_js_url: "https://js.hcaptcha.com/1/api.js"
-  # recaptcha_form_field: "h-captcha-response"
-  # recaptcha_sitekey_class: "h-captcha"
+# Performance monitoring/tracing sample rate for Sentry.io
+#
+# Note that too high values may impact performance, and can be disabled by setting it to 0.0
+#
+# Defaults to 0.15
+#sentry_traces_sample_rate = 0.15
 
 
-  # TURN server information that this homeserver should send to clients.
-  turn:
-    turn_user_lifetime: "5m"
-    turn_uris:
-    #  - turn:turn.server.org?transport=udp
-    #  - turn:turn.server.org?transport=tcp
-    turn_shared_secret: ""
-    # If your TURN server requires static credentials, then you will need to enter
-    # them here instead of supplying a shared secret. Note that these credentials
-    # will be visible to clients!
-    # turn_username: ""
-    # turn_password: ""
+### Database configuration
 
-  # Settings for rate-limited endpoints. Rate limiting kicks in after the threshold
-  # number of "slots" have been taken by requests from a specific host. Each "slot"
-  # will be released after the cooloff time in milliseconds. Server administrators
-  # and appservice users are exempt from rate limiting by default.
-  rate_limiting:
-    enabled: true
-    threshold: 20
-    cooloff_ms: 500
-    exempt_user_ids:
-    #  - "@user:domain.com"
+# This is the only directory where conduwuit will save its data, including media.
+# Note: this was previously "/var/lib/matrix-conduit"
+database_path = "/var/lib/conduwuit"
 
-# Configuration for the Federation API.
-federation_api:
-  # How many times we will try to resend a failed transaction to a specific server. The
-  # backoff is 2**x seconds, so 1 = 2 seconds, 2 = 4 seconds, 3 = 8 seconds etc. Once
-  # the max retries are exceeded, Dendrite will no longer try to send transactions to
-  # that server until it comes back to life and connects to us again.
-  send_max_retries: 16
+# Database backend: Only rocksdb and sqlite are supported. Please note that sqlite
+# will perform significantly worse than rocksdb as it is not intended to be used the
+# way it is by conduwuit. sqlite only exists for historical reasons.
+database_backend = "rocksdb"
 
-  # Disable the validation of TLS certificates of remote federated homeservers. Do not
-  # enable this option in production as it presents a security risk!
-  disable_tls_validation: false
 
-  # Disable HTTP keepalives, which also prevents connection reuse. Dendrite will typically
-  # keep HTTP connections open to remote hosts for 5 minutes as they can be reused much
-  # more quickly than opening new connections each time. Disabling keepalives will close
-  # HTTP connections immediately after a successful request but may result in more CPU and
-  # memory being used on TLS handshakes for each new connection instead.
-  disable_http_keepalives: false
+### Network
 
-  # Perspective keyservers to use as a backup when direct key fetches fail. This may
-  # be required to satisfy key requests for servers that are no longer online when
-  # joining some rooms.
-  key_perspectives:
-    - server_name: matrix.org
-      keys:
-        - key_id: ed25519:auto
-          public_key: Noi6WqcDj0QmPxCNQqgezwTlBKrfqehY1u2FyWP9uYw
-        - key_id: ed25519:a_RXGa
-          public_key: l8Hft5qXKn1vfHrg3p4+W8gELQVo8N13JkluMfmn2sQ
+# The port(s) conduwuit will be running on. You need to set up a reverse proxy such as
+# Caddy or Nginx so all requests to /_matrix on port 443 and 8448 will be
+# forwarded to the conduwuit instance running on this port
+# Docker users: Don't change this, you'll need to map an external port to this.
+# To listen on multiple ports, specify a vector e.g. [8080, 8448]
+#
+# default if unspecified is 8008
+port = 6167
 
-  # This option will control whether Dendrite will prefer to look up keys directly
-  # or whether it should try perspective servers first, using direct fetches as a
-  # last resort.
-  prefer_direct_fetch: false
+# default address (IPv4 or IPv6) conduwuit will listen on. Generally you want this to be
+# localhost (127.0.0.1 / ::1). If you are using Docker or a container NAT networking setup, you
+# likely need this to be 0.0.0.0.
+# To listen multiple addresses, specify a vector e.g. ["127.0.0.1", "::1"]
+#
+# default if unspecified is both IPv4 and IPv6 localhost: ["127.0.0.1", "::1"]
+address = "0.0.0.0"
 
-# Configuration for the Media API.
-media_api:
-  # Storage path for uploaded media. May be relative or absolute.
-  base_path: ./media_store
+# Max request size for file uploads
+max_request_size = 20_000_000 # in bytes
 
-  # The maximum allowed file size (in bytes) for media uploads to this homeserver
-  # (0 = unlimited). If using a reverse proxy, ensure it allows requests at least
-  #this large (e.g. the client_max_body_size setting in nginx).
-  max_file_size_bytes: 10485760
+# Uncomment unix_socket_path to listen on a UNIX socket at the specified path.
+# If listening on a UNIX socket, you must remove/comment the 'address' key if defined and add your
+# reverse proxy to the 'conduwuit' group, unless world RW permissions are specified with unix_socket_perms (666 minimum).
+#unix_socket_path = "/run/conduwuit/conduwuit.sock"
+#unix_socket_perms = 660
 
-  # Whether to dynamically generate thumbnails if needed.
-  dynamic_thumbnails: false
+# Set this to true for conduwuit to compress HTTP response bodies using zstd.
+# This option does nothing if conduwuit was not built with `zstd_compression` feature.
+# Please be aware that enabling HTTP compression may weaken TLS.
+# Most users should not need to enable this.
+# See https://breachattack.com/ and https://wikipedia.org/wiki/BREACH before deciding to enable this.
+zstd_compression = false
 
-  # The maximum number of simultaneous thumbnail generators to run.
-  max_thumbnail_generators: 10
+# Set this to true for conduwuit to compress HTTP response bodies using gzip.
+# This option does nothing if conduwuit was not built with `gzip_compression` feature.
+# Please be aware that enabling HTTP compression may weaken TLS.
+# Most users should not need to enable this.
+# See https://breachattack.com/ and https://wikipedia.org/wiki/BREACH before deciding to enable this.
+gzip_compression = false
 
-  # A list of thumbnail sizes to be generated for media content.
-  thumbnail_sizes:
-    - width: 32
-      height: 32
-      method: crop
-    - width: 96
-      height: 96
-      method: crop
-    - width: 640
-      height: 480
-      method: scale
+# Set this to true for conduwuit to compress HTTP response bodies using brotli.
+# This option does nothing if conduwuit was not built with `brotli_compression` feature.
+# Please be aware that enabling HTTP compression may weaken TLS.
+# Most users should not need to enable this.
+# See https://breachattack.com/ and https://wikipedia.org/wiki/BREACH before deciding to enable this.
+brotli_compression = false
 
-# Configuration for enabling experimental MSCs on this homeserver.
-mscs:
-  mscs:
-  #  - msc2836  # (Threading, see https://github.com/matrix-org/matrix-doc/pull/2836)
+# Vector list of IPv4 and IPv6 CIDR ranges / subnets *in quotes* that you do not want conduwuit to send outbound requests to.
+# Defaults to RFC1918, unroutable, loopback, multicast, and testnet addresses for security.
+#
+# To disable, set this to be an empty vector (`[]`).
+# Please be aware that this is *not* a guarantee. You should be using a firewall with zones as doing this on the application layer may have bypasses.
+#
+# Currently this does not account for proxies in use like Synapse does.
+ip_range_denylist = [
+    "127.0.0.0/8",
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16",
+    "100.64.0.0/10",
+    "192.0.0.0/24",
+    "169.254.0.0/16",
+    "192.88.99.0/24",
+    "198.18.0.0/15",
+    "192.0.2.0/24",
+    "198.51.100.0/24",
+    "203.0.113.0/24",
+    "224.0.0.0/4",
+    "::1/128",
+    "fe80::/10",
+    "fc00::/7",
+    "2001:db8::/32",
+    "ff00::/8",
+    "fec0::/10",
+]
 
-# Configuration for the Sync API.
-sync_api:
-  # This option controls which HTTP header to inspect to find the real remote IP
-  # address of the client. This is likely required if Dendrite is running behind
-  # a reverse proxy server.
-  # real_ip_header: X-Real-IP
 
-  # Configuration for the full-text search engine.
-  search:
-    # Whether or not search is enabled.
-    enabled: false
+### Moderation / Privacy / Security
 
-    # The path where the search index will be created in.
-    index_path: "./searchindex"
+# Set to true to allow user type "guest" registrations. Element attempts to register guest users automatically.
+# Defaults to false
+allow_guest_registration = true
 
-    # The language most likely to be used on the server - used when indexing, to
-    # ensure the returned results match expectations. A full list of possible languages
-    # can be found at https://github.com/blevesearch/bleve/tree/master/analysis/lang
-    language: "en"
+# Set to true to log guest registrations in the admin room.
+# Defaults to false as it may be noisy or unnecessary.
+log_guest_registrations = true
 
-# Configuration for the User API.
-user_api:
-  # The cost when hashing passwords on registration/login. Default: 10. Min: 4, Max: 31
-  # See https://pkg.go.dev/golang.org/x/crypto/bcrypt for more information.
-  # Setting this lower makes registration/login consume less CPU resources at the cost
-  # of security should the database be compromised. Setting this higher makes registration/login
-  # consume more CPU resources but makes it harder to brute force password hashes. This value
-  # can be lowered if performing tests or on embedded Dendrite instances (e.g WASM builds).
-  bcrypt_cost: 10
+# Set to true to allow guest registrations/users to auto join any rooms specified in `auto_join_rooms`
+# Defaults to false
+allow_guests_auto_join_rooms = true
 
-  # The length of time that a token issued for a relying party from
-  # /_matrix/client/r0/user/{userId}/openid/request_token endpoint
-  # is considered to be valid in milliseconds.
-  # The default lifetime is 3600000ms (60 minutes).
-  # openid_token_lifetime_ms: 3600000
+# Vector list of servers that conduwuit will refuse to download remote media from.
+# No default.
+# prevent_media_downloads_from = ["example.com", "example.local"]
 
-  # Users who register on this homeserver will automatically be joined to the rooms listed under "auto_join_rooms" option.
-  # By default, any room aliases included in this list will be created as a publicly joinable room
-  # when the first user registers for the homeserver. If the room already exists,
-  # make certain it is a publicly joinable room, i.e. the join rule of the room must be set to 'public'.
-  # As Spaces are just rooms under the hood, Space aliases may also be used.
-  auto_join_rooms:
-    - "#main:$NEW_CONFIG_STRING"
+# Enables registration. If set to false, no users can register on this
+# server.
+# If set to true without a token configured, users can register with no form of 2nd-
+# step only if you set
+# `yes_i_am_very_very_sure_i_want_an_open_registration_server_prone_to_abuse` to
+# true in your config. If you would like
+# registration only via token reg, please configure the `registration_token` key.
+allow_registration = true
+# Please note that an open registration homeserver with no second-step verification
+# is highly prone to abuse and potential defederation by homeservers, including
+# matrix.org.
 
-  # The number of workers to start for the DeviceListUpdater. Defaults to 8.
-  # This only needs updating if the "InputDeviceListUpdate" stream keeps growing indefinitely.
-  # worker_count: 8
+# A static registration token that new users will have to provide when creating
+# an account. If unset and `allow_registration` is true, registration is open
+# without any condition. YOU NEED TO EDIT THIS.
+registration_token = "some secret password or hash"
 
-# Configuration for Opentracing.
-# See https://github.com/matrix-org/dendrite/tree/master/docs/tracing for information on
-# how this works and how to set it up.
-tracing:
-  enabled: false
-  jaeger:
-    serviceName: ""
-    disabled: false
-    rpc_metrics: false
-    tags: []
-    sampler: null
-    reporter: null
-    headers: null
-    baggage_restrictions: null
-    throttler: null
+# controls whether federation is allowed or not
+# defaults to true
+allow_federation = true
 
-# Logging configuration. The "std" logging type controls the logs being sent to
-# stdout. The "file" logging type controls logs being written to a log folder on
-# the disk. Supported log levels are "debug", "info", "warn", "error".
-logging:
-  - type: std
-    level: info
-  - type: file
-    level: info
-    params:
-      path: ./logs
+# controls whether users are allowed to create rooms.
+# appservices and admins are always allowed to create rooms
+# defaults to true
+allow_room_creation = true
+
+# controls whether non-admin local users are forbidden from sending room invites (local and remote),
+# and if non-admin users can receive remote room invites. admins are always allowed to send and receive all room invites.
+# defaults to false
+block_non_admin_invites = false
+
+# Allows admins to enter commands in rooms other than #admins by prefixing with \!admin. The reply
+# will be publicly visible to the room, originating from the sender.
+# defaults to true
+# admin_escape_commands = true
+
+# List of forbidden username patterns/strings. Values in this list are matched as *contains*.
+# This is checked upon username availability check, registration, and startup as warnings if any local users in your database
+# have a forbidden username.
+# No default.
+# forbidden_usernames = []
+
+# List of forbidden room aliases and room IDs as patterns/strings. Values in this list are matched as *contains*.
+# This is checked upon room alias creation, custom room ID creation if used, and startup as warnings if any room aliases
+# in your database have a forbidden room alias/ID.
+# No default.
+# forbidden_alias_names = []
+
+# List of forbidden server names that we will block all client room joins, incoming federated room directory requests, incoming federated invites for, and incoming federated joins. This check is applied on the room ID, room alias, sender server name, and sender user's server name.
+# Basically "global" ACLs. For our user (client) checks, admin users are allowed.
+# No default.
+# forbidden_remote_server_names = []
+
+# List of forbidden server names that we will block all outgoing federated room directory requests for. Useful for preventing our users from wandering into bad servers or spaces.
+# No default.
+# forbidden_remote_room_directory_server_names = []
+
+# Set this to true to allow your server's public room directory to be federated.
+# Set this to false to protect against /publicRooms spiders, but will forbid external users
+# from viewing your server's public room directory. If federation is disabled entirely
+# (`allow_federation`), this is inherently false.
+allow_public_room_directory_over_federation = true
+
+# Set this to true to allow your server's public room directory to be queried without client
+# authentication (access token) through the Client APIs. Set this to false to protect against /publicRooms spiders.
+allow_public_room_directory_without_auth = true
+
+# Set this to true to lock down your server's public room directory and only allow admins to publish rooms to the room directory.
+# Unpublishing is still allowed by all users with this enabled.
+#
+# Defaults to false
+lockdown_public_room_directory = false
+
+# Set this to true to allow federating device display names / allow external users to see your device display name.
+# If federation is disabled entirely (`allow_federation`), this is inherently false. For privacy, this is best disabled.
+allow_device_name_federation = false
+
+# Vector list of domains allowed to send requests to for URL previews. Defaults to none.
+# Note: this is a *contains* match, not an explicit match. Putting "google.com" will match "https://google.com" and "http://mymaliciousdomainexamplegoogle.com"
+# Setting this to "*" will allow all URL previews. Please note that this opens up significant attack surface to your server, you are expected to be aware of the risks by doing so.
+url_preview_domain_contains_allowlist = []
+
+# Vector list of explicit domains allowed to send requests to for URL previews. Defaults to none.
+# Note: This is an *explicit* match, not a contains match. Putting "google.com" will match "https://google.com", "http://google.com", but not "https://mymaliciousdomainexamplegoogle.com"
+# Setting this to "*" will allow all URL previews. Please note that this opens up significant attack surface to your server, you are expected to be aware of the risks by doing so.
+url_preview_domain_explicit_allowlist = []
+
+# Vector list of URLs allowed to send requests to for URL previews. Defaults to none.
+# Note that this is a *contains* match, not an explicit match. Putting "google.com" will match "https://google.com/", "https://google.com/url?q=https://mymaliciousdomainexample.com", and "https://mymaliciousdomainexample.com/hi/google.com"
+# Setting this to "*" will allow all URL previews. Please note that this opens up significant attack surface to your server, you are expected to be aware of the risks by doing so.
+url_preview_url_contains_allowlist = []
+
+# Vector list of explicit domains not allowed to send requests to for URL previews. Defaults to none.
+# Note: This is an *explicit* match, not a contains match. Putting "google.com" will match "https://google.com", "http://google.com", but not "https://mymaliciousdomainexamplegoogle.com"
+# The denylist is checked first before allowlist. Setting this to "*" will not do anything.
+url_preview_domain_explicit_denylist = []
+
+# Maximum amount of bytes allowed in a URL preview body size when spidering. Defaults to 384KB (384_000 bytes)
+url_preview_max_spider_size = 384_000
+
+# Option to decide whether you would like to run the domain allowlist checks (contains and explicit) on the root domain or not. Does not apply to URL contains allowlist. Defaults to false.
+# Example: If this is enabled and you have "wikipedia.org" allowed in the explicit and/or contains domain allowlist, it will allow all subdomains under "wikipedia.org" such as "en.m.wikipedia.org" as the root domain is checked and matched.
+# Useful if the domain contains allowlist is still too broad for you but you still want to allow all the subdomains under a root domain.
+url_preview_check_root_domain = true
+
+# Config option to allow or disallow incoming federation requests that obtain the profiles
+# of our local users from `/_matrix/federation/v1/query/profile`
+#
+# This is inherently false if `allow_federation` is disabled
+#
+# Defaults to true
+allow_profile_lookup_federation_requests = true
+
+# Config option to automatically deactivate the account of any user who attempts to join a:
+# - banned room
+# - forbidden room alias
+# - room alias or ID with a forbidden server name
+#
+# This may be useful if all your banned lists consist of toxic rooms or servers that no good faith user would ever attempt to join, and
+# to automatically remediate the problem without any admin user intervention.
+#
+# This will also make the user leave all rooms. Federation (e.g. remote room invites) are ignored here.
+#
+# Defaults to false as rooms can be banned for non-moderation-related reasons
+#auto_deactivate_banned_room_attempts = false
+
+
+### Misc
+
+# max log level for conduwuit. allows debug, info, warn, or error
+# see also: https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
+# **Caveat**:
+# For release builds, the tracing crate is configured to only implement levels higher than error to avoid unnecessary overhead in the compiled binary from trace macros.
+# For debug builds, this restriction is not applied.
+#
+# Defaults to "info"
+log = "info"
+
+# controls whether encrypted rooms and events are allowed (default true)
+allow_encryption = true
+
+# if enabled, conduwuit will send a simple GET request periodically to `https://pupbrain.dev/check-for-updates/stable`
+# for any new announcements made. Despite the name, this is not an update check
+# endpoint, it is simply an announcement check endpoint.
+# Defaults to false.
+#allow_check_for_updates = false
+
+# Set to false to disable users from joining or creating room versions that aren't 100% officially supported by conduwuit.
+# conduwuit officially supports room versions 6 - 10. conduwuit has experimental/unstable support for 3 - 5, and 11.
+# Defaults to true.
+#allow_unstable_room_versions = true
+
+# Option to control adding arbitrary text to the end of the user's displayname upon registration with a space before the text.
+# This was the lightning bolt emoji option, just replaced with support for adding your own custom text or emojis.
+# To disable, set this to "" (an empty string)
+# Defaults to "🏳️‍⚧️" (trans pride flag)
+# new_user_displayname_suffix = ""
+
+# Option to control whether conduwuit will query your list of trusted notary key servers (`trusted_servers`) for
+# remote homeserver signing keys it doesn't know *first*, or query the individual servers first before falling back to the trusted
+# key servers.
+#
+# The former/default behaviour makes federated/remote rooms joins generally faster because we're querying a single (or list of) server
+# that we know works, is reasonably fast, and is reliable for just about all the homeserver signing keys in the room. Querying individual
+# servers may take longer depending on the general infrastructure of everyone in there, how many dead servers there are, etc.
+#
+# However, this does create an increased reliance on one single or multiple large entities as `trusted_servers` should generally
+# contain long-term and large servers who know a very large number of homeservers.
+#
+# If you don't know what any of this means, leave this and `trusted_servers` alone to their defaults.
+#
+# Defaults to true as this is the fastest option for federation.
+#query_trusted_key_servers_first = true
+
+# List/vector of room **IDs** that conduwuit will make newly registered users join.
+# The room IDs specified must be rooms that you have joined at least once on the server, and must be public.
+#
+# No default.
+auto_join_rooms = []
+
+# Retry failed and incomplete messages to remote servers immediately upon startup. This is called bursting.
+# If this is disabled, said messages may not be delivered until more messages are queued for that server.
+# Do not change this option unless server resources are extremely limited or the scale of the server's
+# deployment is huge. Do not disable this unless you know what you are doing.
+#startup_netburst = true
+
+# Limit the startup netburst to the most recent (default: 50) messages queued for each remote server. All older
+# messages are dropped and not reattempted. The `startup_netburst` option must be enabled for this value to have
+# any effect. Do not change this value unless you know what you are doing. Set this value to -1 to reattempt
+# every message without trimming the queues; this may consume significant disk. Set this value to 0 to drop all
+# messages without any attempt at redelivery.
+#startup_netburst_keep = 50
+
+# If the 'perf_measurements' feature is enabled, enables collecting folded stack trace profile of tracing spans using
+# tracing_flame. The resulting profile can be visualized with inferno[1], speedscope[2], or a number of other tools.
+# [1]: https://github.com/jonhoo/inferno
+# [2]: www.speedscope.app
+# tracing_flame = false
+
+# If 'tracing_flame' is enabled, sets a filter for which events will be included in the profile.
+# Supported syntax is documented at https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives
+# tracing_flame_filter = "trace,h2=off"
+
+# If 'tracing_flame' is enabled, set the path to write the generated profile.
+# tracing_flame_output_path = "./tracing.folded"
+
+### Generic database options
+
+# Set this to any float value to multiply conduwuit's in-memory LRU caches with.
+# May be useful if you have significant memory to spare to increase performance.
+# Defaults to 1.0.
+#conduit_cache_capacity_modifier = 1.0
+
+# Set this to any float value in megabytes for conduwuit to tell the database engine that this much memory is available for database-related caches.
+# May be useful if you have significant memory to spare to increase performance.
+# Defaults to 256.0
+#db_cache_capacity_mb = 256.0
+
+
+### RocksDB options
+
+# Set this to true to use RocksDB config options that are tailored to HDDs (slower device storage)
+#
+# It is worth noting that by default, conduwuit will use RocksDB with Direct IO enabled. *Generally* speaking this improves performance as it bypasses buffered I/O (system page cache).
+# However there is a potential chance that Direct IO may cause issues with database operations if your setup is uncommon. This has been observed with FUSE filesystems, and possibly ZFS filesystem.
+# RocksDB generally deals/corrects these issues but it cannot account for all setups.
+# If you experience any weird RocksDB issues, try enabling this option as it turns off Direct IO and feel free to report in the conduwuit Matrix room if this option fixes your DB issues.
+# See https://github.com/facebook/rocksdb/wiki/Direct-IO for more information.
+#
+# Defaults to false
+#rocksdb_optimize_for_spinning_disks = false
+
+# Enables direct-io to increase database performance. This is enabled by default. Set this option to false if the
+# database resides on a filesystem which does not support direct-io.
+#rocksdb_direct_io = true
+
+# RocksDB log level. This is not the same as conduwuit's log level. This is the log level for the RocksDB engine/library
+# which show up in your database folder/path as `LOG` files. Defaults to error. conduwuit will typically log RocksDB errors as normal.
+#rocksdb_log_level = "error"
+
+# Max RocksDB `LOG` file size before rotating in bytes. Defaults to 4MB.
+#rocksdb_max_log_file_size = 4194304
+
+# Time in seconds before RocksDB will forcibly rotate logs. Defaults to 0.
+#rocksdb_log_time_to_roll = 0
+
+# Amount of threads that RocksDB will use for parallelism on database operatons such as cleanup, sync, flush, compaction, etc. Set to 0 to use all your logical threads.
+#
+# Defaults to your CPU logical thread count.
+#rocksdb_parallelism_threads = 0
+
+# Enables idle IO priority for compaction thread. This prevents any unexpected lag in the server's operation and
+# is usually a good idea. Enabled by default.
+#rocksdb_compaction_ioprio_idle = true
+
+# Enables idle CPU priority for compaction thread. This is not enabled by default to prevent compaction from
+# falling too far behind on busy systems.
+#rocksdb_compaction_prio_idle = false
+
+# Maximum number of LOG files RocksDB will keep. This must *not* be set to 0. It must be at least 1.
+# Defaults to 3 as these are not very useful.
+#rocksdb_max_log_files = 3
+
+# Type of RocksDB database compression to use.
+# Available options are "zstd", "zlib", "bz2", "lz4", or "none"
+# It is best to use ZSTD as an overall good balance between speed/performance, storage, IO amplification, and CPU usage.
+# For more performance but less compression (more storage used) and less CPU usage, use LZ4.
+# See https://github.com/facebook/rocksdb/wiki/Compression for more details.
+#
+# "none" will disable compression.
+#
+# Defaults to "zstd"
+#rocksdb_compression_algo = "zstd"
+
+# Level of compression the specified compression algorithm for RocksDB to use.
+# Default is 32767, which is internally read by RocksDB as the default magic number and
+# translated to the library's default compression level as they all differ.
+# See their `kDefaultCompressionLevel`.
+#
+#rocksdb_compression_level = 32767
+
+# Level of compression the specified compression algorithm for the bottommost level/data for RocksDB to use.
+# Default is 32767, which is internally read by RocksDB as the default magic number and
+# translated to the library's default compression level as they all differ.
+# See their `kDefaultCompressionLevel`.
+#
+# Since this is the bottommost level (generally old and least used data), it may be desirable to have a very
+# high compression level here as it's lesss likely for this data to be used. Research your chosen compression algorithm.
+#
+#rocksdb_bottommost_compression_level = 32767
+
+# Whether to enable RocksDB "bottommost_compression".
+# At the expense of more CPU usage, this will further compress the database to reduce more storage.
+# It is recommended to use ZSTD compression with this for best compression results.
+# See https://github.com/facebook/rocksdb/wiki/Compression for more details.
+#
+# Defaults to false as this uses more CPU when compressing.
+#rocksdb_bottommost_compression = false
+
+# Database recovery mode (for RocksDB WAL corruption)
+#
+# Use this option when the server reports corruption and refuses to start. Set mode 2 (PointInTime)
+# to cleanly recover from this corruption. The server will continue from the last good state,
+# several seconds or minutes prior to the crash. Clients may have to run "clear-cache & reload" to
+# account for the rollback. Upon success, you may reset the mode back to default and restart again.
+# Please note in some cases the corruption error may not be cleared for at least 30 minutes of
+# operation in PointInTime mode.
+#
+# As a very last ditch effort, if PointInTime does not fix or resolve anything, you can try mode
+# 3 (SkipAnyCorruptedRecord) but this will leave the server in a potentially inconsistent state.
+#
+# The default mode 1 (TolerateCorruptedTailRecords) will automatically drop the last entry in the
+# database if corrupted during shutdown, but nothing more. It is extraordinarily unlikely this will
+# desynchronize clients. To disable any form of silent rollback set mode 0 (AbsoluteConsistency).
+#
+# The options are:
+# 0 = AbsoluteConsistency
+# 1 = TolerateCorruptedTailRecords (default)
+# 2 = PointInTime (use me if trying to recover)
+# 3 = SkipAnyCorruptedRecord (you now voided your Conduwuit warranty)
+#
+# See https://github.com/facebook/rocksdb/wiki/WAL-Recovery-Modes for more information
+#
+# Defaults to 1 (TolerateCorruptedTailRecords)
+#rocksdb_recovery_mode = 1
+
+
+### Domain Name Resolution and Caching
+
+# Maximum entries stored in DNS memory-cache. The size of an entry may vary so please take care if
+# raising this value excessively. Only decrease this when using an external DNS cache. Please note
+# that systemd does *not* count as an external cache, even when configured to do so.
+#dns_cache_entries = 32768
+
+# Minimum time-to-live in seconds for entries in the DNS cache. The default may appear high to most
+# administrators; this is by design. Only decrease this if you are using an external DNS cache.
+#dns_min_ttl = 10800
+
+# Minimum time-to-live in seconds for NXDOMAIN entries in the DNS cache. This value is critical for
+# the server to federate efficiently. NXDOMAIN's are assumed to not be returning to the federation
+# and aggressively cached rather than constantly rechecked.
+#
+# Defaults to 3 days as these are *very rarely* false negatives.
+#dns_min_ttl_nxdomain = 259200
+
+# The number of seconds to wait for a reply to a DNS query. Please note that recursive queries can
+# take up to several seconds for some domains, so this value should not be too low.
+#dns_timeout = 10
+
+# Number of retries after a timeout.
+#dns_attempts = 10
+
+# Fallback to TCP on DNS errors. Set this to false if unsupported by nameserver.
+#dns_tcp_fallback = true
+
+# Enable to query all nameservers until the domain is found. Referred to as "trust_negative_responses" in hickory_resolver.
+# This can avoid useless DNS queries if the first nameserver responds with NXDOMAIN or an empty NOERROR response.
+#
+# The default is to query one nameserver and stop (false).
+#query_all_nameservers = true
+
+# Enables using *only* TCP for querying your specified nameservers instead of UDP.
+#
+# You very likely do *not* want this. hickory-resolver already falls back to TCP on UDP errors.
+# Defaults to false
+#query_over_tcp_only = false
+
+# DNS A/AAAA record lookup strategy
+#
+# Takes a number of one of the following options:
+# 1 - Ipv4Only (Only query for A records, no AAAA/IPv6)
+# 2 - Ipv6Only (Only query for AAAA records, no A/IPv4)
+# 3 - Ipv4AndIpv6 (Query for A and AAAA records in parallel, uses whatever returns a successful response first)
+# 4 - Ipv6thenIpv4 (Query for AAAA record, if that fails then query the A record)
+# 5 - Ipv4thenIpv6 (Query for A record, if that fails then query the AAAA record)
+#
+# If you don't have IPv6 networking, then for better performance it may be suitable to set this to Ipv4Only (1) as
+# you will never ever use the AAAA record contents even if the AAAA record is successful instead of the A record.
+#
+# Defaults to 5 - Ipv4ThenIpv6 as this is the most compatible and IPv4 networking is currently the most prevalent.
+ip_lookup_strategy = 5
+
+
+### Request Timeouts, Connection Timeouts, and Connection Pooling
+
+## Request Timeouts are HTTP response timeouts
+## Connection Timeouts are TCP connection timeouts
+##
+## Connection Pooling Timeouts are timeouts for keeping an open idle connection alive.
+## Connection pooling and keepalive is very useful for federation or other places where for performance reasons,
+## we want to keep connections open that we will re-use frequently due to TCP and TLS 1.3 overhead/expensiveness.
+##
+## Generally these defaults are the best, but if you find a reason to need to change these they are here.
+
+# Default/base connection timeout.
+# This is used only by URL previews and update/news endpoint checks
+#
+# Defaults to 10 seconds
+#request_conn_timeout = 10
+
+# Default/base request timeout. The time waiting to receive more data from another server.
+# This is used only by URL previews, update/news, and misc endpoint checks
+#
+# Defaults to 35 seconds
+#request_timeout = 35
+
+# Default/base request total timeout. The time limit for a whole request. This is set very high to not
+# cancel healthy requests while serving as a backstop.
+# This is used only by URL previews and update/news endpoint checks
+#
+# Defaults to 320 seconds
+#request_total_timeout = 320
+
+# Default/base idle connection pool timeout
+# This is used only by URL previews and update/news endpoint checks
+#
+# Defaults to 5 seconds
+#request_idle_timeout = 5
+
+# Default/base max idle connections per host
+# This is used only by URL previews and update/news endpoint checks
+#
+# Defaults to 1 as generally the same open connection can be re-used
+#request_idle_per_host = 1
+
+# Federation well-known resolution connection timeout
+#
+# Defaults to 6 seconds
+#well_known_conn_timeout = 6
+
+# Federation HTTP well-known resolution request timeout
+#
+# Defaults to 10 seconds
+#well_known_timeout = 10
+
+# Federation client request timeout
+# You most definitely want this to be high to account for extremely large room joins, slow homeservers, your own resources etc.
+#
+# Defaults to 300 seconds
+#federation_timeout = 300
+
+# Federation client idle connection pool timeout
+#
+# Defaults to 25 seconds
+#federation_idle_timeout = 25
+
+# Federation client max idle connections per host
+#
+# Defaults to 1 as generally the same open connection can be re-used
+#federation_idle_per_host = 1
+
+# Federation sender request timeout
+# The time it takes for the remote server to process sent transactions can take a while.
+#
+# Defaults to 180 seconds
+#sender_timeout = 180
+
+# Federation sender idle connection pool timeout
+#
+# Defaults to 180 seconds
+#sender_idle_timeout = 180
+
+# Federation sender transaction retry backoff limit
+#
+# Defaults to 86400 seconds
+#sender_retry_backoff_limit = 86400
+
+# Appservice URL request connection timeout
+#
+# Defaults to 35 seconds as generally appservices are hosted within the same network
+#appservice_timeout = 35
+
+# Appservice URL idle connection pool timeout
+#
+# Defaults to 300 seconds
+#appservice_idle_timeout = 300
+
+# Notification gateway pusher idle connection pool timeout
+#
+# Defaults to 15 seconds
+#pusher_idle_timeout = 15
+
+
+### Presence / Typing Indicators / Read Receipts
+
+# Config option to control local (your server only) presence updates/requests. Defaults to true.
+# Note that presence on conduwuit is very fast unlike Synapse's.
+# If using outgoing presence, this MUST be enabled.
+#
+allow_local_presence = true
+
+# Config option to control incoming federated presence updates/requests. Defaults to true.
+# This option receives presence updates from other servers, but does not send any unless `allow_outgoing_presence` is true.
+# Note that presence on conduwuit is very fast unlike Synapse's.
+#
+allow_incoming_presence = true
+
+# Config option to control outgoing presence updates/requests. Defaults to true.
+# This option sends presence updates to other servers, but does not receive any unless `allow_incoming_presence` is true.
+# Note that presence on conduwuit is very fast unlike Synapse's.
+# If using outgoing presence, you MUST enable `allow_local_presence` as well.
+#
+allow_outgoing_presence = true
+
+# Config option to enable the presence idle timer for remote users. Disabling is offered as an optimization for
+# servers participating in many large rooms or when resources are limited. Disabling it may cause incorrect
+# presence states (i.e. stuck online) to be seen for some remote users. Defaults to true.
+#presence_timeout_remote_users = true
+
+# Config option to control how many seconds before presence updates that you are idle. Defaults to 5 minutes.
+#presence_idle_timeout_s = 300
+
+# Config option to control how many seconds before presence updates that you are offline. Defaults to 30 minutes.
+#presence_offline_timeout_s = 1800
+
+# Config option to control whether we should receive remote incoming read receipts.
+# Defaults to true.
+allow_incoming_read_receipts = true
+
+# Config option to control whether we should send read receipts to remote servers.
+# Defaults to true.
+allow_outgoing_read_receipts = true
+
+# Config option to control outgoing typing updates to federation. Defaults to true.
+allow_outgoing_typing = true
+
+# Config option to control incoming typing updates from federation. Defaults to true.
+allow_incoming_typing = true
+
+# Config option to control maximum time federation user can indicate typing.
+#typing_federation_timeout_s = 30
+
+# Config option to control minimum time local client can indicate typing. This does not override
+# a client's request to stop typing. It only enforces a minimum value in case of no stop request.
+#typing_client_timeout_min_s = 15
+
+# Config option to control maximum time local client can indicate typing.
+#typing_client_timeout_max_s = 45
+
+
+### TURN / VoIP
+
+# vector list of TURN URIs/servers to use
+#
+# No default
+#turn_uris = ["turn:example.turn.uri?transport=udp", "turn:example.turn.uri?transport=tcp"]
+
+# TURN secret to use for generating the HMAC-SHA1 hash apart of username and password generation
+#
+# this is more secure, but if needed you can use traditional username/password below.
+#
+# no default
+#turn_secret = ""
+
+# TURN username to provide the client
+#
+# no default
+#turn_username = ""
+
+# TURN password to provide the client
+#
+# no default
+#turn_password = ""
+
+# TURN TTL
+#
+# Default is 86400 seconds
+#turn_ttl = 86400
+
+# allow guests/unauthenticated users to access TURN credentials
+#
+# this is the equivalent of Synapse's `turn_allow_guests` config option. this allows
+# any unauthenticated user to call `/_matrix/client/v3/voip/turnServer`.
+#
+# defaults to false
+#turn_allow_guests = false
+
+
+# Other options not in [global]:
+#
+#
+# Enables running conduwuit with direct TLS support
+# It is strongly recommended you use a reverse proxy instead. This is primarily relevant for test suites like complement that require a private CA setup.
+# [global.tls]
+# certs = "/path/to/my/certificate.crt"
+# key = "/path/to/my/private_key.key"
+#
+# Whether to listen and allow for HTTP and HTTPS connections (insecure!)
+# This config option is only available if conduwuit was built with `axum_dual_protocol` feature (not default feature)
+# Defaults to false
+#dual_protocol = false
+
+
+# If you are using delegation via well-known files and you cannot serve them from your reverse proxy, you can
+# uncomment these to serve them directly from conduwuit. This requires proxying all requests to conduwuit, not just `/_matrix` to work.
+
+#[global.well_known]
+#server = "matrix.example.com:443"
+#client = "https://matrix.example.com"
+
+# A single contact and/or support page for /.well-known/matrix/support
+# All options here are strings. Currently only supports 1 single contact.
+# No default.
+
+# support_page = ""
+# support_role = ""
+# support_email = "youremailhere@example.com"
+# support_mxid = "@yourusername:example.com"
 EOF
         echo "Done."
 fi
