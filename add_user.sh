@@ -1,17 +1,36 @@
 #!/bin/bash
 
-read -p "Enter the name of the new user: " USERNAME
-read -p "Is new user admin (y|n)?(n)" ISADMIN
+PASSWORD=""
 
-# Set default to 'n' if the input is empty or just whitespace
-ISADMIN=${ISADMIN:-n}
-
-# Convert input to lowercase for case-insensitive checking
-ISADMIN_LOWER=$(echo "$ISADMIN" | tr '[:upper:]' '[:lower:]')
-
-if [[ "$ISADMIN_LOWER" == "y" || "$ISADMIN_LOWER" == "yes" ]]; then
-	docker exec -it simple-matrix-server-monolith-1 /usr/bin/create-account -config /etc/dendrite/dendrite.yaml -username $USERNAME -admin
-else
-	docker exec -it simple-matrix-server-monolith-1 /usr/bin/create-account -config /etc/dendrite/dendrite.yaml -username $USERNAME
+read -p "Enter the name of the admin user: " USERNAME
+function prompt_and_confirm_password {
+	local password=""
+    local password_confirm=""
+	while true; do
+		read -s -r -p "Enter the password of the admin user: " password
+		echo ""
+		read -s -r -p "Confirm password: " password_confirm
+		echo ""
+		if [ "$password" = "$password_confirm" ]; then
+			PASSWORD="$password"
+			password=""
+			password_confirm=""
+			return 0
+		else
+			echo ""
+            echo "❌ Passwords DO NOT match. Please try again."
+		fi
+	done
+	
+if prompt_and_confirm_password; then
+	# Make sure the service is not running
+	docker compose down
+	
+	# Add the admin user
+	docker compose run \
+	  --rm continuwuity \
+	  --execute 'users create $USERNAME $PASSWORD' \
+	  --execute 'server shutdown'
+  	PASSWORD=""
+	echo "Done."
 fi
-echo "Done."
