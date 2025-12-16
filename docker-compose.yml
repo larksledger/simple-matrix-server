@@ -1,40 +1,26 @@
 services:
   # 1. The Matrix Server (Conduit)
-  postgres:
-    hostname: postgres
-    image: postgres:15-alpine
-    restart: always
-    volumes:
-      - ./dendrite_postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: itsasecret
-      POSTGRES_USER: dendrite
-      POSTGRES_DATABASE: dendrite
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dendrite"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - matrix_net
-
-  monolith:
-    hostname: monolith
-    image: ghcr.io/element-hq/dendrite-monolith:latest
-    ports:
-      - 8008:8008
-      - 8448:8448
-    volumes:
-      - ./config:/etc/dendrite
-      - ./dendrite_media:/var/dendrite/media
-      - ./dendrite_jetstream:/var/dendrite/jetstream
-      - ./dendrite_search_index:/var/dendrite/searchindex
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - matrix_net
+  continuwuity:
+    image: forgejo.ellis.link/continuwuation/continuwuity:latest
+    # If you want bleeding edge functionality, and are able to keep up with updates,
+    # use the `:main` tag instead:
+    # image: forgejo.ellis.link/continuwuation/continuwuity:main
+    container_name: continuwuity
     restart: unless-stopped
+    ports:
+      - "6167:6167"  # remove 127.0.0.1 if you need to bypass the reverse proxy externally.
+    volumes:
+      - /etc/resolv.conf:/etc/resolv.conf:ro  # this is required to avoid DNS performance issues # TODO What about Windows hosts?
+      - ./config.toml:/etc/conduwuit.toml:ro
+      - ./data:/var/lib/conduwuit:rw  # this is where the database and media files are stored.
+      # If you want your media files to be stored on a different volume, you can instead map that like so:
+      # - ./media:/var/lib/conduwuit/media:rw
+      # It is recommended that the database be kept on an SSD, ideally an NVMe
+      # It doesn't matter where media is stored, but the database needs to be fast. HDDs work but are suboptimal.
+    environment:
+      CONDUWUIT_CONFIG: '/etc/conduwuit.toml'  # tells continuwuity where the config file is
+    networks:
+      - matrix_net
 
   # 2. The Reverse Proxy (Caddy)
   caddy:
@@ -49,6 +35,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy_data:/data
       - ./caddy_config:/config
+      - ./www:/var/www
     networks:
       - matrix_net
 
