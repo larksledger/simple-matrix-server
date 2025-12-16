@@ -1,5 +1,7 @@
 # My Matrix Homeserver
 
+## ⚠️Attention: This branch is under heavy construction and very unstable. Wait until it is merged into main before using⚠️
+
 This repo is designed to hopefully be an accessible resource on how you could host your own [Matrix](https://matrix.org/) server, so that you can have private, end-to-end encrypted chats with your friends and families and don't need to trust companies to not infringe on your privacy.
 
 If you follow this guide, by the end you will have a
