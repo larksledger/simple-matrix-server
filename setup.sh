@@ -31,13 +31,14 @@ if [[ ! -f "$CADDYFILE" ]]; then
 # 1. The Matrix Subdomain
 # This handles the actual traffic and federation
 $NEW_CONFIG_STRING {
-    header /.well-known/matrix/* {
+    header {
         Access-Control-Allow-Origin *
         Content-Type application/json
         Cache-Control public,max-age=806400
     }
-    file_server /.well-known/matrix/* {
+    handle /.well-known/matrix/* {
         root /var/www/
+		file_server
     }
     reverse_proxy /_matrix/* continuwuity:6167
 }
