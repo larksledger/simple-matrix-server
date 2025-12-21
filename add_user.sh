@@ -1,8 +1,8 @@
 #!/bin/bash
 
 PASSWORD=""
-
-read -p "Enter the name of the admin user: " USERNAME
+echo "Note: First user will have admin privileges."
+read -p "Enter the name of the user: " USERNAME
 function prompt_and_confirm_password {
 	local password=""
     local password_confirm=""
@@ -30,8 +30,7 @@ if prompt_and_confirm_password; then
 	# Add the admin user
 	docker compose run \
 	  --rm continuwuity \
-	  --execute 'users create $USERNAME $PASSWORD' \
-	  --execute 'server shutdown'
+	  conduwuit --execute "users create-user $USERNAME $PASSWORD"
   	PASSWORD=""
 	echo "Done."
 fi
