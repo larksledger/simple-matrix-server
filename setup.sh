@@ -77,20 +77,6 @@ EOF
         echo "Done."
 fi
 
-echo "Generating keys"
-mkdir -p "keys"
-docker run --rm --entrypoint="" \
-  -v $(pwd):/mnt \
-  ghcr.io/element-hq/dendrite-monolith:latest \
-  /usr/bin/generate-keys \
-  -private-key /mnt/matrix_key.pem \
-  -tls-cert /mnt/server.crt \
-  -tls-key /mnt/server.key
-mv matrix_key.pem keys/
-mv server.crt keys/
-mv server.key keys/
-echo "Done"
-
 echo "Generating a strong password for the database"
 generate_random_string() {
   local length=${1:-10}  # Default length to 10 if not provided
