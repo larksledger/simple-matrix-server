@@ -1,20 +1,17 @@
-# 1. The Matrix Subdomain
+# 1. The root domain
 # This handles the actual traffic and federation
-matrix.your-domain.com {
-	header {
-		Access-Control-Allow-Origin *
-        Content-Type application/json
-        Cache-Control public,max-age=806400
+your-domain.com {
+	handle_path /.well-known/matrix/* {
+		header Access-Control-Allow-Origin *
+        header Content-Type application/json
+        header Cache-Control public,max-age=806400
+		respond /client `{"m.homeserver": {"base_url":"https://matrix.your-domain.com"}}`
+		respond /server `{"m.server":"matrix.your-domain.com:443"}`
+		respond 404
     }
-    handle /.well-known/matrix/* {
-        root /var/www/
-		file_server
-    }
-    reverse_proxy /_matrix/* continuwuity:6167
 }
 
-# 2. The Root Domain
-your-domain.com {
-	root * /var/www/
-    file_server
+# 2. The matrix subdomain
+matrix.your-domain.com {
+	reverse_proxy continuwuity:6167
 }
