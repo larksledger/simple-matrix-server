@@ -21,6 +21,7 @@ function prompt_and_confirm_password {
             echo "❌ Passwords DO NOT match. Please try again."
 		fi
 	done
+	}
 	
 if prompt_and_confirm_password; then
 	# Make sure the service is not running
