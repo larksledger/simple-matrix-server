@@ -35,7 +35,6 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy_data:/data
       - ./caddy_config:/config
-      - ./www:/var/www
     networks:
       - matrix_net
 
