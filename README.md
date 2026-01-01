@@ -4,7 +4,7 @@ This repo is designed to hopefully be an accessible resource on how you could ho
 
 If you follow this guide, by the end you will have a
 
-- Matrix server, [Dendrite](https://github.com/element-hq/dendrite) to be exact
+- Matrix server, [Conduwuit](https://continuwuity.org/) to be exact
 - Your own, free domain, which will always point to your network, even if your ISP-assigned IP changes regularly
 - As a reverse proxy, [Caddy](https://caddyserver.com/), which automatically cares about https certificates, redirects `matrix.yourdomain.org` to your matrix server and is a solid piece of infrastructure if you ever want to host more self-hosted services
 
@@ -75,7 +75,7 @@ Enter the subdomain prefix (e.g., chat, matrix): matrix
 Enter your domain name (e.g., mydomain.net): yourdomain.duckdns.org
 ```
 
-This configures the server such that matrix clients would need to connect to `matrix.yourdomain.duckdns.org`.
+This configures the server such that matrix clients would need to connect to `yourdomain.duckdns.org`, but are delegated to `matrix.yourdomain.duckdns.org`. That way, your users will have the generally nicer suffix `yourdomain.duckdns.org` while matrix is managed on a subdomain.
 
 #### Manual post-setup
 The setup sript cannot perform everything for you. The configuration for the dynamical DNS will still be missing, as it varies with each DynDNS provider and there are many of these providers. The configuration is in `ddns_data/config.json`. You can refer to the [documentation](https://github.com/qdm12/ddns-updater/tree/master/docs) for your provider to fill in the blanks. 
@@ -85,8 +85,12 @@ TODO
 
 ## 3. Post Setup
 ### Adding users
-By default, registration of new users is disabled. If you want to add users, you have to add them with the `create-account` utility in the dendrite container. For your convenience, there is the `add_user.sh` script that makes this interaction a little faster.
+By default, registration of new users is allowed only if they know a secret token. This token is configured in `config.toml` around line 185.
+
+If you want to add users, you have to add them with the `users create-user` utility in the continuwuity container. For your convenience, there is the `add_user.sh` script that makes this interaction a little faster. Note that the first user account will be equipped with admin privileges, so first create the admin account and then your perosonal accounts. You also need to manually exit the `add_user.sh` script. Sorry about that.
+
+I do not know how registration interacts with adding users, i.e. if the very first user is registered via token, will he be admin? I suggest you use the `add_user.sh` for the very first user.
 
 ## TODOs
-- Federation
-- TURN server
+- [x] Federation
+- [ ] TURN server
